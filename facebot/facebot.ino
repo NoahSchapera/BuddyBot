@@ -18,8 +18,6 @@ Servo neck;
 class Bot 
 {
   public:  
-
-
   // time vals, millis
   //overflow in approx 1 month
   long unsigned search_init;
@@ -28,10 +26,12 @@ class Bot
   // 2 mins
   long unsigned search_wait = 120000;
 
+  // emote wait times
   long unsigned emote_init;
   long unsigned emote_elapsed;
   long unsigned emote_wait = 20000;
 
+  // smile bitmap
   int smile[8] = 
   {
     B00000000,
@@ -69,7 +69,20 @@ class Bot
     B00000000  
   };
 
-  // animation of hearts
+  // question bitmap
+  int question[8] = 
+  {
+    0b00000000,
+    0b00111100,
+    0b01100110,
+    0b00000110,
+    0b00011100,
+    0b00011000,
+    0b00000000,
+    0b00011000 
+  };
+
+  // heart bitmap anim
   int heart_anim[4][8] = 
   {
     { 
@@ -114,75 +127,98 @@ class Bot
       0b01111110,
       0b00111100,
       0b00011000
-    }, // frame 4
+    } // frame 4
   };
 
-  // question bitmap
-  int question[8] = 
+  // sleep bitmap anim
+  int sleep_anim[3][8] = 
   {
-    0b00000000,
-    0b00111100,
-    0b01100110,
-    0b00000110,
-    0b00011100,
-    0b00011000,
-    0b00000000,
-    0b00011000 
+    {
+      0b11111111,
+      0b10000110,
+      0b00001100,
+      0b00011000,
+      0b00110000,
+      0b01100001,
+      0b11000011,
+      0b11111111
+    },
+    {
+      0b00000000,
+      0b01111110,
+      0b01000100,
+      0b00001000,
+      0b00010000,
+      0b00100010,
+      0b01111110,
+      0b00000000
+    },
+    {
+      0b00000000,
+      0b00000000,
+      0b00111100,
+      0b00001000,
+      0b00010000,
+      0b00111100,
+      0b00000000,
+      0b00000000
+    }
   };
+
+  
  
   //display a bitmap
   //default, lc as display
-  void disp(int pic[], LedControl l = lc)
-  {
-    for(int i = 0; i < 8; i++)
-    {
-      l.setRow(0,i,pic[i]);
-    }
-  }
+  void disp(int pic[], LedControl l);
 
-  void dispAnim(int pic_arr[])
-  {
-    int rows = sizeof(pic_arr) / sizeof(pic_arr[0]); // 2 rows
+  void dispAnim(int pic_arr[]);
 
-    for(int i = 0; i < rows; i++)
-    {
-      disp(pic_arr[i]);
-    }  
+  void search(Servo s, UltraSonicDistanceSensor ud);
 
-
-  }
 };
 
+void Bot::disp(int pic[], LedControl l = lc)
+{
+  for(int i = 0; i < 8; i++)
+  {
+    l.setRow(0,i,pic[i]);
+  }
+}
 
-// initialize bot
-Bot bot;
+void Bot::dispAnim(int pic_arr[])
+{
+  int rows = sizeof(pic_arr) / sizeof(pic_arr[0]); // 2 rows
 
+  for(int i = 0; i < rows; i++)
+  {
+    disp(pic_arr[i]);
+  }  
+}
 
-// runtime variables
-// can we get rid of this??
-int pos = 90;
-int rval = 0;
 
 //search function for bot
 //default, ultrasonic distance sensor, neck servo
-void search(Bot b = bot, Servo s = neck, UltraSonicDistanceSensor d = distanceSensor)
+// search range
+void Bot::search(Servo s = neck, UltraSonicDistanceSensor d = distanceSensor)
 {
-  b.disp(b.question);
-
+  disp(question);
 
   int dists[181];
-  int min_val = 0;
-  int min_index = 0;
+  int min_val=INT8_MAX;
+  int min_index;
 
   s.write(0);
-  for (pos = 0; pos <= 180; pos += 1) 
+  delay(10);
+  for (int pos = 0; pos <= 180; pos += 1) 
   { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     s.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(5);
+    delay(15);
     // waits 15ms for the servo to reach the position
     dists[pos] = d.measureDistanceCm();
-    delay(50); //wait for measurement   
+    Serial.println(dists[pos]);
+    //Serial.println(dists[pos]);
+    delay(100); //wait for measurement   
   }
   for (int i=1; i<180; i++)
   {
@@ -193,9 +229,22 @@ void search(Bot b = bot, Servo s = neck, UltraSonicDistanceSensor d = distanceSe
     }
   }
   s.write(min_index);
-  b.disp(b.smile);
-  
+
+  Serial.println(min_index);
+  disp(smile);
+
 }
+
+// initialize bot
+Bot bot;
+
+
+// runtime variables
+// can we get rid of this??
+int pos = 90;
+int rval = 0;
+
+
 
 void  setup() 
 {
@@ -214,7 +263,7 @@ void  setup()
 
   // display smile, search for user
   bot.disp(bot.smile);
-  search();
+  bot.search();
 }
 
 void loop()
@@ -224,7 +273,7 @@ void loop()
   if(millis() - bot.search_init > bot.search_wait)
   {
     bot.search_init = millis();
-    search();
+    bot.search();
   }
 
 
